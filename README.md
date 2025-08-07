@@ -328,36 +328,35 @@ UnitPrice — price per item
 
 # Setup
 
-CREATE DATABASE IF NOT EXISTS SALES;
-USE SALES;
+``` CREATE DATABASE IF NOT EXISTS SALES;
+USE SALES; ```
 
 # Data Exploration
 # Preview first 1000 rows
 
-SELECT * FROM SALES.RETAIL LIMIT 1000;
+``` SELECT * FROM SALES.RETAIL LIMIT 1000; ```
 
 Total records count
 
-SELECT COUNT(*) FROM SALES.RETAIL;
+``` SELECT COUNT(*) FROM SALES.RETAIL; ```
 
 # Records with missing CustomerID
 
-SELECT COUNT(*) FROM SALES.RETAIL WHERE CUSTOMERID = '';
+``` SELECT COUNT(*) FROM SALES.RETAIL WHERE CUSTOMERID = ''; ```
 
-#Most recent invoice date
+# Most recent invoice date
 
-SELECT MAX(InvoiceDate) FROM SALES.RETAIL;
-
+``` SELECT MAX(InvoiceDate) FROM SALES.RETAIL; ```
 # Convert InvoiceDate string to DATETIME
-
+```
 SELECT 
   INVOICEDATE,
   STR_TO_DATE(INVOICEDATE, '%m/%d/%Y %H:%i') AS INVOICEDATE_IN_DATE
 FROM RETAIL
 LIMIT 5;
-
+```
 # Revenue Calculation per Invoice Line
-
+```
 SELECT 
   InvoiceNo, 
   CUSTOMERID, 
@@ -367,10 +366,10 @@ FROM RETAIL
 WHERE CUSTOMERID IS NOT NULL AND CUSTOMERID <> ''
 ORDER BY CUSTOMERID
 LIMIT 5;
-
+```
 # Customer Retention Cohort Analysis
 Groups customers by their first purchase month, then counts how many customers from each cohort made purchases in the subsequent months.
-
+```
 WITH CTE1 AS (
   SELECT 
     InvoiceNo, 
@@ -421,10 +420,10 @@ SELECT
 FROM CTE3
 GROUP BY FIRST_PURCHASE_MONTH
 ORDER BY FIRST_PURCHASE_MONTH;
-
+```
 # Revenue Retention Cohort Analysis
 Sums revenue for each cohort over subsequent months.
-
+```
 WITH CTE1 AS (
   SELECT 
     CUSTOMERID, 
@@ -474,7 +473,7 @@ SELECT
 FROM CTE3
 GROUP BY Cohort
 ORDER BY Cohort;
-
+```
 # Usage Instructions
 Import your retail data into the SALES.RETAIL table.
 
