@@ -487,6 +487,7 @@ SELECT
 FROM CTE3
 GROUP BY Cohort
 ORDER BY Cohort;
+
 Explanation:
 
 Similar cohort grouping as customer retention.
