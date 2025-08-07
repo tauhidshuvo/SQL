@@ -297,199 +297,199 @@ ORDER BY 2 DESC;
 - Calculate recency, frequency, and monetary scores for each customer.
 - Segment customers into categories based on RFM scores.
 
-# Cohort Analysis on SALES.RETAIL Dataset using SQL
-## Project Overview
-This project demonstrates how to perform cohort analysis on retail sales data stored in a SQL database. Cohort analysis is a powerful technique used to analyze customer retention and revenue behavior over time by grouping customers based on their first purchase date (cohort) and tracking their activity in subsequent months.
+# Retail Sales Cohort Analysis Using SQL
+# Project Overview
+This project analyzes retail sales data to perform cohort analysis—a powerful method to understand customer retention and revenue trends over time. Customers are grouped by their first purchase month, then tracked across subsequent months for retention and revenue behavior.
 
-# The analysis focuses on two main perspectives:
+# The analysis includes:
 
-Customer retention by cohort (count of active customers)
+Customer retention by cohort month
 
-Revenue retention by cohort (sum of revenue per cohort)
+Revenue retention by cohort month
 
-The SQL queries use advanced window functions, common table expressions (CTEs), and date/time functions to generate cohorts and calculate monthly retention metrics.
+The dataset is stored in the SALES.RETAIL table, and all analysis is done with SQL leveraging window functions, common table expressions (CTEs), and date manipulation.
 
-Dataset Description
+Dataset Details
 Database: SALES
 
 Table: RETAIL
 
 Key Columns:
 
-InvoiceNo: Unique invoice number for each transaction.
+InvoiceNo — unique invoice identifier
 
-CustomerID: Unique identifier for customers.
+CustomerID — unique customer identifier
 
-InvoiceDate: Date and time of invoice (string format: 'mm/dd/yyyy hh:mm').
+InvoiceDate — invoice date/time (string format: 'mm/dd/yyyy hh:mm')
 
-Quantity: Number of units purchased.
+Quantity — number of items purchased
 
-UnitPrice: Price per unit.
+UnitPrice — price per item
 
-# Environment Setup
+# Setup
+
 CREATE DATABASE IF NOT EXISTS SALES;
 USE SALES;
 
+# Data Exploration
+# Preview first 1000 rows
+
 SELECT * FROM SALES.RETAIL LIMIT 1000;
-SELECT count(*) FROM sales.retail; -- 404202
 
-SELECT count(*) FROM sales.retail
-WHERE CUSTOMERID = ''; -- 103242
+Total records count
 
-SELECT *  FROM SALES.RETAIL LIMIT 10000;
-SELECT max(InvoiceDate) FROM SALES.RETAIL; -- mm/dd/yyyy hh:mm
+SELECT COUNT(*) FROM SALES.RETAIL;
+
+# Records with missing CustomerID
+
+SELECT COUNT(*) FROM SALES.RETAIL WHERE CUSTOMERID = '';
+
+#Most recent invoice date
+
+SELECT MAX(InvoiceDate) FROM SALES.RETAIL;
+
+# Convert InvoiceDate string to DATETIME
 
 SELECT 
-	INVOICEDATE,
-	STR_TO_DATE(INVOICEDATE, '%m/%d/%Y %H:%i') AS INVOICEDATE_IN_DATE
+  INVOICEDATE,
+  STR_TO_DATE(INVOICEDATE, '%m/%d/%Y %H:%i') AS INVOICEDATE_IN_DATE
 FROM RETAIL
-LIMIT 1000;
+LIMIT 5;
 
-
-    SELECT 
-        InvoiceNo, 
-        CUSTOMERID, 
-        STR_TO_DATE(INVOICEDATE, '%m/%d/%Y %H:%i') AS INVOICEDATE, 
-        ROUND(QUANTITY * UNITPRICE, 2) AS REVENUE
-    FROM RETAIL
-    WHERE CUSTOMERID IS NOT NULL AND CUSTOMERID <> ''
-    ORDER BY CUSTOMERID;
-# Basic Revenue Calculation
-Calculate revenue per transaction:
+# Revenue Calculation per Invoice Line
 
 SELECT 
-        InvoiceNo, 
-        CUSTOMERID, 
-        STR_TO_DATE(INVOICEDATE, '%m/%d/%Y %H:%i') AS INVOICEDATE, 
-        ROUND(QUANTITY * UNITPRICE, 2) AS REVENUE
-    FROM RETAIL
-    WHERE CUSTOMERID IS NOT NULL AND CUSTOMERID <> ''
-    ORDER BY CUSTOMERID;
-# Cohort Analysis: Customer Retention
+  InvoiceNo, 
+  CUSTOMERID, 
+  STR_TO_DATE(INVOICEDATE, '%m/%d/%Y %H:%i') AS INVOICEDATE, 
+  ROUND(QUANTITY * UNITPRICE, 2) AS REVENUE
+FROM RETAIL
+WHERE CUSTOMERID IS NOT NULL AND CUSTOMERID <> ''
+ORDER BY CUSTOMERID
+LIMIT 5;
+
+# Customer Retention Cohort Analysis
+Groups customers by their first purchase month, then counts how many customers from each cohort made purchases in the subsequent months.
+
 WITH CTE1 AS (
-    SELECT 
-        InvoiceNo, 
-        CUSTOMERID, 
-        STR_TO_DATE(INVOICEDATE, '%m/%d/%Y %H:%i') AS INVOICEDATE, 
-        ABS(ROUND(QUANTITY * UNITPRICE, 2)) AS REVENUE
-    FROM RETAIL
-    WHERE CUSTOMERID IS NOT NULL AND CUSTOMERID <> ''
+  SELECT 
+    InvoiceNo, 
+    CUSTOMERID, 
+    STR_TO_DATE(INVOICEDATE, '%m/%d/%Y %H:%i') AS INVOICEDATE, 
+    ABS(ROUND(QUANTITY * UNITPRICE, 2)) AS REVENUE
+  FROM RETAIL
+  WHERE CUSTOMERID IS NOT NULL AND CUSTOMERID <> ''
 ),
 CTE2 AS (
-    SELECT 
-        InvoiceNo, 
-        CUSTOMERID, 
-        INVOICEDATE, 
-        DATE_FORMAT(INVOICEDATE, '%Y-%m-01') AS PURCHASE_MONTH,
-        DATE_FORMAT(MIN(INVOICEDATE) OVER (PARTITION BY CUSTOMERID ORDER BY INVOICEDATE), '%Y-%m-01') AS FIRST_PURCHASE_MONTH,
-        REVENUE
-    FROM CTE1
+  SELECT 
+    InvoiceNo, 
+    CUSTOMERID, 
+    INVOICEDATE, 
+    DATE_FORMAT(INVOICEDATE, '%Y-%m-01') AS PURCHASE_MONTH,
+    DATE_FORMAT(MIN(INVOICEDATE) OVER (PARTITION BY CUSTOMERID ORDER BY INVOICEDATE), '%Y-%m-01') AS FIRST_PURCHASE_MONTH,
+    REVENUE
+  FROM CTE1
 ),
 CTE3 AS (
-    SELECT 
-        CUSTOMERID, 
-        FIRST_PURCHASE_MONTH,
-        CONCAT(
-            'Month_', 
-            PERIOD_DIFF(
-                EXTRACT(YEAR_MONTH FROM PURCHASE_MONTH),
-                EXTRACT(YEAR_MONTH FROM FIRST_PURCHASE_MONTH)
-            )
-        ) AS COHORT_MONTH
-    FROM CTE2
+  SELECT 
+    CUSTOMERID, 
+    FIRST_PURCHASE_MONTH,
+    CONCAT(
+      'Month_', 
+      PERIOD_DIFF(
+        EXTRACT(YEAR_MONTH FROM PURCHASE_MONTH),
+        EXTRACT(YEAR_MONTH FROM FIRST_PURCHASE_MONTH)
+      )
+    ) AS COHORT_MONTH
+  FROM CTE2
 )
 SELECT 
-    FIRST_PURCHASE_MONTH AS Cohort,
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_0', CUSTOMERID, NULL)) AS "Month_0",
-    -- COUNT(DISTINCT CASE WHEN COHORT_MONTH = 'Month_0' THEN CUSTOMERID ELSE NULL END) AS "Month_0",
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_1', CUSTOMERID, NULL)) AS "Month_1",
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_2', CUSTOMERID, NULL)) AS "Month_2",
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_3', CUSTOMERID, NULL)) AS "Month_3",
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_4', CUSTOMERID, NULL)) AS "Month_4",
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_5', CUSTOMERID, NULL)) AS "Month_5",
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_6', CUSTOMERID, NULL)) AS "Month_6",
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_7', CUSTOMERID, NULL)) AS "Month_7",
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_8', CUSTOMERID, NULL)) AS "Month_8",
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_9', CUSTOMERID, NULL)) AS "Month_9",
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_10', CUSTOMERID, NULL)) AS "Month_10",
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_11', CUSTOMERID, NULL)) AS "Month_11",
-    COUNT(DISTINCT IF(COHORT_MONTH = 'Month_12', CUSTOMERID, NULL)) AS "Month_12"
+  FIRST_PURCHASE_MONTH AS Cohort,
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_0', CUSTOMERID, NULL)) AS "Month_0",
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_1', CUSTOMERID, NULL)) AS "Month_1",
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_2', CUSTOMERID, NULL)) AS "Month_2",
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_3', CUSTOMERID, NULL)) AS "Month_3",
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_4', CUSTOMERID, NULL)) AS "Month_4",
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_5', CUSTOMERID, NULL)) AS "Month_5",
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_6', CUSTOMERID, NULL)) AS "Month_6",
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_7', CUSTOMERID, NULL)) AS "Month_7",
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_8', CUSTOMERID, NULL)) AS "Month_8",
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_9', CUSTOMERID, NULL)) AS "Month_9",
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_10', CUSTOMERID, NULL)) AS "Month_10",
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_11', CUSTOMERID, NULL)) AS "Month_11",
+  COUNT(DISTINCT IF(COHORT_MONTH = 'Month_12', CUSTOMERID, NULL)) AS "Month_12"
 FROM CTE3
 GROUP BY FIRST_PURCHASE_MONTH
 ORDER BY FIRST_PURCHASE_MONTH;
-# Explanation:
 
-Identify each customer's first purchase month (cohort).
-
-Calculate the difference in months between each purchase and the first purchase.
-
-Count distinct customers active in each cohort month.
-
-# Cohort Analysis: Revenue Retention
-This query calculates total revenue per cohort per month:
+# Revenue Retention Cohort Analysis
+Sums revenue for each cohort over subsequent months.
 
 WITH CTE1 AS (
-    SELECT 
-        CUSTOMERID, 
-        STR_TO_DATE(INVOICEDATE, '%m/%d/%Y %H:%i') AS INVOICEDATE, 
-        ROUND(QUANTITY * UNITPRICE, 0) AS REVENUE
-    FROM RETAIL
-    WHERE CUSTOMERID IS NOT NULL AND CUSTOMERID <> ''
+  SELECT 
+    CUSTOMERID, 
+    STR_TO_DATE(INVOICEDATE, '%m/%d/%Y %H:%i') AS INVOICEDATE, 
+    ROUND(QUANTITY * UNITPRICE, 0) AS REVENUE
+  FROM RETAIL
+  WHERE CUSTOMERID IS NOT NULL AND CUSTOMERID <> ''
 ),
 CTE2 AS (
-    SELECT 
-        CUSTOMERID, 
-        INVOICEDATE, 
-        DATE_FORMAT(INVOICEDATE, '%Y-%m-01') AS PURCHASE_MONTH,
-        DATE_FORMAT(MIN(INVOICEDATE) OVER (PARTITION BY CUSTOMERID ORDER BY INVOICEDATE), '%Y-%m-01') AS FIRST_PURCHASE_MONTH,
-        REVENUE
-    FROM CTE1
+  SELECT 
+    CUSTOMERID, 
+    INVOICEDATE, 
+    DATE_FORMAT(INVOICEDATE, '%Y-%m-01') AS PURCHASE_MONTH,
+    DATE_FORMAT(MIN(INVOICEDATE) OVER (PARTITION BY CUSTOMERID ORDER BY INVOICEDATE), '%Y-%m-01') AS FIRST_PURCHASE_MONTH,
+    REVENUE
+  FROM CTE1
 ),
 CTE3 AS (
-    SELECT 
-        CUSTOMERID,
-        FIRST_PURCHASE_MONTH AS Cohort,
-        CONCAT(
-            'Month_', 
-            PERIOD_DIFF(
-                EXTRACT(YEAR_MONTH FROM PURCHASE_MONTH),
-                EXTRACT(YEAR_MONTH FROM FIRST_PURCHASE_MONTH)
-            )
-        ) AS COHORT_MONTH,
-        REVENUE
-    FROM CTE2
+  SELECT 
+    CUSTOMERID,
+    FIRST_PURCHASE_MONTH AS Cohort,
+    CONCAT(
+      'Month_', 
+      PERIOD_DIFF(
+        EXTRACT(YEAR_MONTH FROM PURCHASE_MONTH),
+        EXTRACT(YEAR_MONTH FROM FIRST_PURCHASE_MONTH)
+      )
+    ) AS COHORT_MONTH,
+    REVENUE
+  FROM CTE2
 )
 SELECT 
-    Cohort,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_0' THEN REVENUE ELSE 0 END) AS Month_0,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_1' THEN REVENUE ELSE 0 END) AS Month_1,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_2' THEN REVENUE ELSE 0 END) AS Month_2,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_3' THEN REVENUE ELSE 0 END) AS Month_3,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_4' THEN REVENUE ELSE 0 END) AS Month_4,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_5' THEN REVENUE ELSE 0 END) AS Month_5,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_6' THEN REVENUE ELSE 0 END) AS Month_6,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_7' THEN REVENUE ELSE 0 END) AS Month_7,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_8' THEN REVENUE ELSE 0 END) AS Month_8,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_9' THEN REVENUE ELSE 0 END) AS Month_9,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_10' THEN REVENUE ELSE 0 END) AS Month_10,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_11' THEN REVENUE ELSE 0 END) AS Month_11,
-    SUM(CASE WHEN COHORT_MONTH = 'Month_12' THEN REVENUE ELSE 0 END) AS Month_12
+  Cohort,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_0' THEN REVENUE ELSE 0 END) AS Month_0,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_1' THEN REVENUE ELSE 0 END) AS Month_1,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_2' THEN REVENUE ELSE 0 END) AS Month_2,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_3' THEN REVENUE ELSE 0 END) AS Month_3,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_4' THEN REVENUE ELSE 0 END) AS Month_4,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_5' THEN REVENUE ELSE 0 END) AS Month_5,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_6' THEN REVENUE ELSE 0 END) AS Month_6,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_7' THEN REVENUE ELSE 0 END) AS Month_7,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_8' THEN REVENUE ELSE 0 END) AS Month_8,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_9' THEN REVENUE ELSE 0 END) AS Month_9,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_10' THEN REVENUE ELSE 0 END) AS Month_10,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_11' THEN REVENUE ELSE 0 END) AS Month_11,
+  SUM(CASE WHEN COHORT_MONTH = 'Month_12' THEN REVENUE ELSE 0 END) AS Month_12
 FROM CTE3
 GROUP BY Cohort
 ORDER BY Cohort;
 
-Explanation:
+# Usage Instructions
+Import your retail data into the SALES.RETAIL table.
 
-Similar cohort grouping as customer retention.
+Run the exploration queries to verify data completeness.
 
-Calculates total revenue generated by each cohort in each month.
+Execute the cohort analysis queries to extract customer retention and revenue trends.
 
-# How to Use
-Ensure the SALES.RETAIL table is loaded with the retail sales data.
+Use the results for further analysis or visualization in BI tools like Power BI, Tableau, or Excel.
 
-Run the initial exploratory queries to understand the dataset.
+# Possible Extensions
+Calculate retention rates as a percentage of the original cohort.
 
-Execute the cohort analysis queries to get customer count retention and revenue retention tables.
+Segment cohorts by geography, product categories, or customer demographics.
 
-Export the results for further visualization (e.g., in Excel, Power BI, Tableau).
+Expand analysis period beyond 12 months.
+
+Automate monthly cohort reporting with dashboards.
 
