@@ -329,7 +329,7 @@ UnitPrice — price per item
 # Setup
 
 ``` CREATE DATABASE IF NOT EXISTS SALES;
-USE SALES; ```
+USE SALES; 
 
 # Data Exploration
 # Preview first 1000 rows
