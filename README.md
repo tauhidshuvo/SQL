@@ -329,6 +329,7 @@ UnitPrice — price per item
 # Setup
 
 -- Create and select the SALES database
+```sql
 CREATE DATABASE IF NOT EXISTS SALES;
 USE SALES;
 
@@ -367,12 +368,12 @@ SELECT
 FROM RETAIL
 WHERE CUSTOMERID IS NOT NULL AND CUSTOMERID <> ''
 ORDER BY CUSTOMERID;
--- Example: Customer 12346, InvoiceNo 536365, Revenue: 178.50
 
+```
 ----------------------------------------------------------------------------------
 -- 🧮 Cohort Analysis Based on Customer Retention
 ----------------------------------------------------------------------------------
-
+```sql
 WITH CTE1 AS (
     SELECT 
         InvoiceNo, 
@@ -423,16 +424,10 @@ SELECT
 FROM CTE3
 GROUP BY FIRST_PURCHASE_MONTH
 ORDER BY FIRST_PURCHASE_MONTH;
-
--- Sample Output:
--- Cohort         Month_0   Month_1   Month_2 ...
--- 2010-12-01     500       210       110
--- 2011-01-01     600       300       150
-
-----------------------------------------------------------------------------------
+```
 -- 💰 Cohort Analysis Based on Revenue
 ----------------------------------------------------------------------------------
-
+```sql
 WITH CTE1 AS (
     SELECT 
         CUSTOMERID, 
@@ -482,12 +477,7 @@ SELECT
 FROM CTE3
 GROUP BY Cohort
 ORDER BY Cohort;
-
--- Sample Output:
--- Cohort         Month_0   Month_1   Month_2 ...
--- 2010-12-01     15000     6200      3200
--- 2011-01-01     17800     8400      3700
-
+```
 # Usage Instructions
 Import your retail data into the SALES.RETAIL table.
 
