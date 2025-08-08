@@ -496,3 +496,106 @@ Expand analysis period beyond 12 months.
 
 Automate monthly cohort reporting with dashboards.
 
+# 📊 Domino’s Pizza Sales Analysis Using SQL
+# Project Overview:
+As a data analyst appointed at Domino’s Pizza HQ, your goal is to explore order and sales data to extract meaningful insights that support business decision-making across operations, sales, and customer trends.
+
+# 🔍 Database Exploration
+Objective: Understand the structure of the main datasets.
+```sql
+DESCRIBE orders;
+DESCRIBE pizza_types;
+```
+# 💰 CS1: Total Revenue from All Orders
+Goal: Calculate total revenue by multiplying price and quantity for all orders.
+```sql
+WITH CTE AS (
+    SELECT 
+        ORDER_ID, 
+        O.PIZZA_ID, 
+        QUANTITY, 
+        PRICE, 
+        (QUANTITY * PRICE) AS TOTAL_PRICE
+    FROM ORDER_DETAILS O
+    LEFT JOIN PIZZAS P ON O.PIZZA_ID = P.PIZZA_ID
+)
+SELECT 
+    ROUND(SUM(TOTAL_PRICE), 2) AS TWO_DIGIT_,
+    SUM(TOTAL_PRICE) AS TOTAL_REVENUE
+FROM CTE;
+```
+# 🍕 CS2: Revenue by Pizza Size
+Goal: Determine which pizza sizes generate the most revenue.
+```sql
+SELECT 
+    P.SIZE, 
+    ROUND(SUM(P.PRICE * OD.QUANTITY), 0) AS TOTAL_REVENUE
+FROM ORDER_DETAILS OD 
+JOIN PIZZAS P ON OD.PIZZA_ID = P.PIZZA_ID
+GROUP BY P.SIZE
+ORDER BY TOTAL_REVENUE DESC;
+```
+# 📆 CS3: Top 5 Highest Sales Days
+Goal: Identify which days had the highest number of pizza orders.
+```sql
+WITH CTE AS (
+    SELECT
+        DATE, 
+        COUNT(ORDER_ID) AS DAILY_SALES,
+        RANK() OVER (ORDER BY COUNT(ORDER_ID) DESC) AS RN
+    FROM ORDERS
+    GROUP BY DATE
+)
+SELECT * 
+FROM CTE
+WHERE RN <= 5;
+```s
+# ❄️ CS4: December Order Volume
+Goal: Calculate total number of orders in December.
+```sql
+SELECT SUM(IDS) AS TOTAL_ORDERS_IN_DECEMBER FROM (
+    SELECT DATE,
+           COUNT(ORDER_ID) AS IDS
+    FROM ORDERS 
+    WHERE STR_TO_DATE(date, '%Y-%m-%d') BETWEEN '2015-12-01' AND '2015-12-30' 
+    GROUP BY DATE
+) X;
+```
+# 📅 CS5: Monthly Pizza Sales
+Goal: Track pizza orders by month.
+```sql
+WITH CTE AS (
+    SELECT STR_TO_DATE(date, '%Y-%m-%d') AS DAYS, ORDER_ID, TIME
+    FROM ORDERS
+)
+SELECT 
+    EXTRACT(MONTH FROM DAYS) AS MONTH, 
+    COUNT(ORDER_ID) AS TOTAL_ORDERS
+FROM CTE 
+GROUP BY MONTH
+ORDER BY TOTAL_ORDERS DESC;
+```
+# ⏰ CS6: Orders by Time of Day
+Goal: Analyze order patterns across different parts of the day.
+```sql
+WITH CTE AS (
+    SELECT HOUR(STR_TO_DATE(TIME, '%H:%i:%s')) AS TIMESS, ORDER_ID
+    FROM ORDERS
+)
+SELECT 
+    CASE
+        WHEN TIMESS BETWEEN 0 AND 11 THEN 'MORNING'
+        WHEN TIMESS BETWEEN 12 AND 17 THEN 'AFTERNOON'
+        WHEN TIMESS BETWEEN 18 AND 23 THEN 'EVENING'
+    END AS TIME_OF_THE_DAY,
+    COUNT(ORDER_ID) AS TOTAL_ORDERS
+FROM CTE
+GROUP BY TIME_OF_THE_DAY
+ORDER BY TOTAL_ORDERS DESC;
+```
+# 🧪 Testing / Errors Encountered
+Unknown column 'PRICE' – Ensure correct table is joined for price data.
+
+Ambiguous column 'PIZZA_ID' – Always use table aliases when joining.
+
+GROUP BY error – Use GROUP BY on all non-aggregated fields to comply with ONLY_FULL_GROUP_BY SQL mode.
